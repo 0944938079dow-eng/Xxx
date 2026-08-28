@@ -1,0 +1,68 @@
+-- Block Spin: Fishing System (ServerScript)
+local Players = game:GetService("Players")
+
+-- ตั้งค่าไอเทมมินิเกมตกปลา (ปลาแต่ละชนิด + โอกาสสุ่ม)
+local FISH_POOL = {
+	{ Name = "ปลาตะเพียน (Common)", Weight = 50, Coins = 10 },
+	{ Name = "ปลาดุก (Uncommon)", Weight = 30, Coins = 25 },
+	{ Name = "แซลมอน (Rare)", Weight = 15, Coins = 60 },
+	{ Name = "ปลาคราฟทอง (Epic)", Weight = 4, Coins = 200 },
+	{ Name = "ฉลามบล็อก (Legendary)", Weight = 1, Coins = 1000 }
+}
+
+-- ฟังก์ชันคำนวณการสุ่มแบบถ่วงน้ำหนัก (Weighted Random)
+local function getRandomFish()
+	local totalWeight = 0
+	for _, fish in ipairs(FISH_POOL) do
+		totalWeight = totalWeight + fish.Weight
+	end
+	
+	local randomNum = math.random(1, totalWeight)
+	local currentWeight = 0
+	
+	for _, fish in ipairs(FISH_POOL) do
+		currentWeight = currentWeight + fish.Weight
+		if randomNum <= currentWeight then
+			return fish
+		end
+	end
+	return FISH_POOL[1]
+end
+
+-- ระบบ Leaderstats เก็บเงิน (Coins)
+Players.PlayerAdded:Connect(function(player)
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats"
+	leaderstats.Parent = player
+	
+	local coins = Instance.new("IntValue")
+	coins.Name = "Coins"
+	coins.Value = 0
+	coins.Parent = leaderstats
+end)
+
+-- ฟังก์ชันการตกปลา (เรียกใช้เมื่อผู้เล่นกดใช้เบ็ด)
+local function startFishing(player)
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then return end
+	
+	print(player.Name .. " กำลังหย่อนเบ็ด...")
+	
+	-- จำลองเวลาในการรอปลาติดเบ็ด (2 - 5 วินาที)
+	task.wait(math.random(2, 5))
+	
+	local caughtFish = getRandomFish()
+	leaderstats.Coins.Value = leaderstats.Coins.Value + caughtFish.Coins
+	
+	print(player.Name .. " ตกได้: " .. caughtFish.Name .. " (ได้รับ " .. caughtFish.Coins .. " Coins)")
+end
+
+-- สร้าง RemoteFunction เพื่อรับส่งสัญญาณกับหน้าจอ UI หรือ Tool
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local fishingEvent = Instance.new("RemoteEvent")
+fishingEvent.Name = "FishingEvent"
+fishingEvent.Parent = ReplicatedStorage
+
+fishingEvent.OnServerEvent:Connect(function(player)
+	startFishing(player)
+end)
